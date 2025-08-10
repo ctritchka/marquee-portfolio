@@ -132,7 +132,7 @@ body{margin:0;font-family: Arial, sans-serif}
     track.style.setProperty('--shift', groupWidth + 'px');
 
     // set animation duration proportional to width (adjust speedFactor to taste)
-    const speedFactor = 0.085; // seconds per px (smaller = faster)
+    const speedFactor = 0.055; // seconds per px (smaller = faster)
     const durationSec = Math.max(8, Math.round(groupWidth * speedFactor));
     track.style.setProperty('--duration', durationSec + 's');
   }
