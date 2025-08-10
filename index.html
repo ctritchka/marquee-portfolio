@@ -1,0 +1,154 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Smooth marquee</title>
+
+<!-- Google font -->
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --item-gap: 60px;    /* spacing between items */
+  --img-size: 56px;    /* image size */
+  --font-size: 60px;   /* text size */
+  --duration: 20s;     /* default; JS will override based on width */
+  --shift: 0px;        /* how far to translate (set by JS) */
+}
+
+*{box-sizing:border-box}
+body{margin:0;font-family: Arial, sans-serif}
+
+/* container that clips the scrolling row */
+.marquee{
+  overflow: hidden;
+  padding: 18px 0;          /* gives vertical breathing room so g, y not cut off */
+  background: transparent;
+}
+
+/* the track that moves left */
+.marquee-track{
+  display: flex;
+  align-items: center;
+  width: max-content;
+  will-change: transform;
+  animation: scroll var(--duration) linear infinite;
+}
+
+/* one logical copy of items */
+.marquee-group{
+  display:flex;
+  align-items:center;
+}
+
+/* every item (text or image) */
+.marquee-item{
+  display:flex;
+  align-items:center;
+  margin-right: var(--item-gap); /* EXACT spacing */
+}
+
+/* text sizing */
+.marquee-item span{
+  font-family: 'Young Serif', serif;
+  font-size: var(--font-size);
+  line-height: 1.2; /* room for descenders */
+  white-space: nowrap;
+}
+
+/* image sizing */
+.marquee-item img{
+  width: var(56 px);
+  height: var(56 px);
+  object-fit: contain;
+  display:block;
+}
+
+/* the animation translates by exactly one group's width (set via --shift) */
+@keyframes scroll{
+  from { transform: translateX(0); }
+  to   { transform: translateX(calc(var(--shift) * -1)); }
+}
+
+/* optional: pause on hover */
+.marquee:hover .marquee-track{ animation-play-state: paused; }
+</style>
+</head>
+<body>
+
+<div class="marquee">
+  <div class="marquee-track">
+    <!-- ONE group (JS will clone as many needed) -->
+    <div class="marquee-group">
+      <div class="marquee-item"><span>product designer</span></div>
+      <div class="marquee-item"><img src="https://example.com/image1.png" alt=""></div>
+      <div class="marquee-item"><span>UI/UX designer</span></div>
+      <div class="marquee-item"><img src="https://example.com/image2.png" alt=""></div>
+      <div class="marquee-item"><span>illustrator</span></div>
+      <div class="marquee-item"><img src="https://example.com/image2.png" alt=""></div>
+      <div class="marquee-item"><span>musician</span></div>
+      <div class="marquee-item"><img src="https://example.com/image2.png" alt=""></div>
+    </div>
+    <!-- second/extra groups will be created by JS if needed -->
+  </div>
+</div>
+
+<script>
+(function(){
+  const marquee = document.querySelector('.marquee');
+  const track   = document.querySelector('.marquee-track');
+  const group   = document.querySelector('.marquee-group');
+
+  // wait until images in the track are loaded (so measurements are accurate)
+  function waitForImages(element){
+    const imgs = Array.from(element.querySelectorAll('img'));
+    const promises = imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; }));
+    return Promise.all(promises);
+  }
+
+  function setup(){
+    // remove any extra groups first (keep a single canonical group)
+    while(track.querySelectorAll('.marquee-group').length > 1){
+      track.removeChild(track.lastElementChild);
+    }
+
+    // ensure there are enough groups so the track width > container width * 2
+    // (this avoids visible blank gaps on short content)
+    const containerWidth = marquee.getBoundingClientRect().width || window.innerWidth;
+    let totalWidth = track.getBoundingClientRect().width;
+    while(totalWidth < containerWidth * 2){
+      const clone = group.cloneNode(true);
+      track.appendChild(clone);
+      totalWidth = track.getBoundingClientRect().width;
+      // safety break
+      if (track.querySelectorAll('.marquee-group').length > 10) break;
+    }
+
+    // measure width of one group (the amount we must shift)
+    const firstGroup = track.querySelector('.marquee-group');
+    const groupWidth = firstGroup.getBoundingClientRect().width;
+
+    // set CSS var used by keyframes
+    track.style.setProperty('--shift', groupWidth + 'px');
+
+    // set animation duration proportional to width (adjust speedFactor to taste)
+    const speedFactor = 0.085; // seconds per px (smaller = faster)
+    const durationSec = Math.max(8, Math.round(groupWidth * speedFactor));
+    track.style.setProperty('--duration', durationSec + 's');
+  }
+
+  function init(){
+    waitForImages(track).then(() => {
+      setup();
+    });
+  }
+
+  // init and re-calc on resize (debounced)
+  init();
+  let t;
+  window.addEventListener('resize', ()=>{ clearTimeout(t); t = setTimeout(init, 150); });
+})();
+</script>
+
+</body>
+</html>
